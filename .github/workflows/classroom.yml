@@ -31,4 +31,4 @@ jobs:
         env:
           RUN-TESTS_RESULTS: "${{steps.run-tests.outcome}}"
         with:
-          runners: "run-tests"
+          runners: run-tests
