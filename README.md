@@ -32,8 +32,12 @@ Goals:
 - `UnsafeTaskListDemo`
 - `SafeTaskListDemo`
 
-### Student work
+### Exercises
 - `ThreadSafeTaskCounter` (exercise)
+- `TaskWorker` (exercise)
+- `PeriodicLogger` (exercise)
+- `SharedTaskList`  (exercise)
+- `LambdaRunnableExercise` (exercise)
 - `TaskRegistry` (homework)
 
 ## Running demos
