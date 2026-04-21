@@ -650,6 +650,7 @@
         <a href="#why-concurrent">Why concurrent?</a>
         <a href="#atomic">Atomics</a>
         <a href="#locks">Locks</a>
+        <a href="#readwritelock">ReadWriteLock</a>
         <a href="#synchronizers">Synchronizers</a>
         <a href="#executors">Executors</a>
         <a href="#callable">Callable/Future</a>
@@ -1119,6 +1120,131 @@ public void increment() {
             <li>When using advanced producer-consumer patterns later.</li>
           </ul>
           <div class="callout note">For many everyday cases, <code>synchronized</code> is still perfectly valid. The point is not that locks are always better. The point is that they solve different problems.</div>
+        </div>
+      </div>
+    </section>
+
+    <section id="readwritelock">
+      <div class="section-head">
+        <div>
+          <h2><code>ReentrantReadWriteLock</code>: separate locks for readers and writers</h2>
+          <p>A plain <code>ReentrantLock</code> lets only one thread in at a time — even if every thread just wants to read. <code>ReentrantReadWriteLock</code> fixes this by maintaining two coordinated locks: many readers may hold the read lock simultaneously, but a writer gets exclusive access.</p>
+        </div>
+      </div>
+
+      <div class="grid-2">
+        <div class="panel">
+          <div class="icon">📖</div>
+          <h3>The core idea</h3>
+          <table>
+            <thead>
+              <tr>
+                <th>Situation</th>
+                <th>Allowed?</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td>Multiple threads reading at the same time</td>
+                <td>✅ Yes — readers do not block each other</td>
+              </tr>
+              <tr>
+                <td>One thread writing while others read</td>
+                <td>❌ No — writer waits for all readers to finish</td>
+              </tr>
+              <tr>
+                <td>Two threads writing at the same time</td>
+                <td>❌ No — writers are mutually exclusive</td>
+              </tr>
+            </tbody>
+          </table>
+          <div class="callout good">Best when reads are frequent and writes are rare — a read-heavy cache, a configuration store, or a leaderboard that is read thousands of times per second but updated occasionally.</div>
+        </div>
+
+        <div class="panel">
+          <div class="icon">🔑</div>
+          <h3>Basic pattern</h3>
+<pre><code>private final ReadWriteLock rwLock =
+    new ReentrantReadWriteLock();
+
+private final Lock readLock  = rwLock.readLock();
+private final Lock writeLock = rwLock.writeLock();
+
+private Map&lt;String, String&gt; cache = new HashMap&lt;&gt;();
+
+public String get(String key) {
+    readLock.lock();
+    try {
+        return cache.get(key);   // many threads at once
+    } finally {
+        readLock.unlock();
+    }
+}
+
+public void put(String key, String value) {
+    writeLock.lock();
+    try {
+        cache.put(key, value);   // exclusive access
+    } finally {
+        writeLock.unlock();
+    }
+}</code></pre>
+        </div>
+      </div>
+
+      <div class="grid-2" style="margin-top:18px;">
+        <div class="panel">
+          <h3><code>ReentrantLock</code> vs <code>ReentrantReadWriteLock</code></h3>
+          <table>
+            <thead>
+              <tr>
+                <th>Feature</th>
+                <th><code>ReentrantLock</code></th>
+                <th><code>ReentrantReadWriteLock</code></th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td>Concurrent reads</td>
+                <td>No — one thread at a time</td>
+                <td>Yes — unlimited simultaneous readers</td>
+              </tr>
+              <tr>
+                <td>Exclusive writes</td>
+                <td>Yes</td>
+                <td>Yes</td>
+              </tr>
+              <tr>
+                <td>Complexity</td>
+                <td>Simple — one lock object</td>
+                <td>Two lock objects from one factory</td>
+              </tr>
+              <tr>
+                <td>Best when</td>
+                <td>Reads and writes are equally common</td>
+                <td>Reads vastly outnumber writes</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <div class="panel">
+          <h3>Watch-outs</h3>
+          <div class="stack-steps">
+            <div class="step">
+              <strong>Writer starvation</strong>
+              If readers never stop arriving, a waiting writer may never get the lock. Some implementations support a fair mode (<code>new ReentrantReadWriteLock(true)</code>) to prevent this.
+            </div>
+            <div class="step">
+              <strong>No lock upgrading</strong>
+              A thread holding the read lock cannot upgrade to the write lock without releasing first. Attempting this causes a deadlock.
+            </div>
+            <div class="step">
+              <strong>Always unlock in <code>finally</code></strong>
+              The same rule as <code>ReentrantLock</code> — both the read lock and the write lock must be released in a <code>finally</code> block.
+            </div>
+          </div>
+          <div class="callout warn">If you are not sure whether reads dominate, stick with a plain <code>ReentrantLock</code>. The extra complexity of a read-write lock only pays off when the read-to-write ratio is high.</div>
         </div>
       </div>
     </section>
