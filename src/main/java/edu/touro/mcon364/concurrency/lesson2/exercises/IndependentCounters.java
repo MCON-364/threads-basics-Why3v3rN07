@@ -1,7 +1,9 @@
 package edu.touro.mcon364.concurrency.lesson2.exercises;
 
 import java.util.concurrent.locks.Lock;
+import java.util.concurrent.locks.ReadWriteLock;
 import java.util.concurrent.locks.ReentrantLock;
+import java.util.concurrent.locks.ReentrantReadWriteLock;
 
 /**
  * Exercise 6 — Replace a coarse object lock with a targeted {@link ReentrantLock}.
@@ -27,25 +29,42 @@ public class IndependentCounters {
     private int readCount  = 0;
     private int writeCount = 0;
 
-    // TODO: add two separate lock fields — one to guard readCount, one to guard writeCount.
+    // Add two separate lock fields — one to guard readCount, one to guard writeCount.
     //       Why two locks instead of one?  What contention does that eliminate?
+
+    private final ReadWriteLock rwLock = new ReentrantReadWriteLock();
+
+    private final Lock readLock  = rwLock.readLock();
+    private final Lock writeLock = rwLock.writeLock();
+
+
 
     /**
      * Record a read operation.
-     * TODO: replace the synchronized keyword with an explicit lock.
+     * Replace the synchronized keyword with an explicit lock.
      *       Remember: always release the lock even if an exception is thrown.
      */
     public synchronized void read() {
-        readCount++;
+        readLock.lock();
+        try {
+            readCount++;
+        } finally {
+            readLock.unlock();
+        }
     }
 
     /**
      * Record a write operation.
-     * TODO: replace the synchronized keyword with an explicit lock.
+     * Replace the synchronized keyword with an explicit lock.
      *       Remember: always release the lock even if an exception is thrown.
      */
     public synchronized void write() {
-        writeCount++;
+        writeLock.lock();
+        try {
+            writeCount++;
+        } finally {
+            writeLock.unlock();
+        }
     }
 
     public int getReadCount()  { return readCount; }
